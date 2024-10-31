@@ -285,7 +285,12 @@ The following features are planned and will be coming down the line:
 1. Squashing some bugs. (please report any issues you find)
 1. More Content Type Support
 
-Feel free to contribute! Prerequisites:
+### Currently Missing
+
+1. FormType/MultiformType integration
+1. Full Authentication Setup.
+
+### Feel free to contribute! Prerequisites:
 
 1. Git
 1. Go 1.22.5+
