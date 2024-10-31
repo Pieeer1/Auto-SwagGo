@@ -91,11 +91,11 @@ type Schema struct {
 }
 
 type Property struct {
-	Type       string   `json:"type,omitempty"`
-	Descripton string   `json:"description,omitempty"`
-	Format     string   `json:"format,omitempty"`
-	Example    string   `json:"example,omitempty"`
-	Enum       []string `json:"enum,omitempty"`
+	Type        string   `json:"type,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Format      string   `json:"format,omitempty"`
+	Example     any      `json:"example,omitempty"`
+	Enum        []string `json:"enum,omitempty"`
 }
 
 type Items struct {

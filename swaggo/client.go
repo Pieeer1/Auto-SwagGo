@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 )
@@ -33,19 +34,19 @@ func NewSwaggoMux(swaggerInfo *SwaggerInfo, baseUri, prefix string, versions []s
 	}
 
 	if len(versions) == 0 {
-		client.HandleFunc("/swagger/index.html", client.swagger, []string{"GET"}, "")
-		client.HandleFunc("/openapi.json", client.swaggerJson, []string{"GET"}, "")
+		client.HandleFunc("/swagger/index.html", client.swagger, "", RequestDetails{Method: "GET"})
+		client.HandleFunc("/openapi.json", client.swaggerJson, "", RequestDetails{Method: "GET"})
 	}
 
 	for _, version := range versions {
-		client.HandleFunc("/swagger/index.html", client.swagger, []string{"GET"}, version)
-		client.HandleFunc("/openapi.json", client.swaggerJson, []string{"GET"}, version)
+		client.HandleFunc("/swagger/index.html", client.swagger, version, RequestDetails{Method: "GET"})
+		client.HandleFunc("/openapi.json", client.swaggerJson, version, RequestDetails{Method: "GET"})
 	}
 
 	return client
 }
 
-func (m *SwaggoMux) Handle(path string, handler http.Handler, methods []string, version string) {
+func (m *SwaggoMux) Handle(path string, handler http.Handler, version string, requestDetails ...RequestDetails) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -57,13 +58,18 @@ func (m *SwaggoMux) Handle(path string, handler http.Handler, methods []string, 
 		fullPath = fmt.Sprintf("%s/%s%s", m.prefix, version, path)
 	}
 
-	m.routes = append(m.routes, Route{Methods: methods, Path: fullPath, Handler: handler, Prefix: m.prefix, Version: version})
-	m.mux.Handle(fullPath, m.defaultMiddleware(handler, methods))
+	m.routes = append(m.routes, Route{Path: fullPath, Handler: handler, Prefix: m.prefix, Version: version, RequestDetails: requestDetails})
+	m.mux.Handle(fullPath, m.defaultMiddleware(handler, requestDetails))
 
 }
 
-func (m *SwaggoMux) defaultMiddleware(handler http.Handler, methods []string) http.Handler {
+func (m *SwaggoMux) defaultMiddleware(handler http.Handler, requestDetails []RequestDetails) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		methods := ext.SliceMap(requestDetails, func(rd RequestDetails) string {
+			return rd.Method
+		})
+
 		if !ext.Contains(methods, r.Method) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -71,8 +77,8 @@ func (m *SwaggoMux) defaultMiddleware(handler http.Handler, methods []string) ht
 	})
 }
 
-func (m *SwaggoMux) HandleFunc(path string, handler func(http.ResponseWriter, *http.Request), methods []string, version string, requestsAndResponses ...RequestOrResponse) {
-	m.Handle(path, http.HandlerFunc(handler), methods, version)
+func (m *SwaggoMux) HandleFunc(path string, handler func(http.ResponseWriter, *http.Request), version string, requestDetails ...RequestDetails) {
+	m.Handle(path, http.HandlerFunc(handler), version, requestDetails...)
 }
 
 func (m *SwaggoMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +121,6 @@ func (c *SwaggoMux) swaggerJson(w http.ResponseWriter, r *http.Request) {
 
 func (c *SwaggoMux) swagger(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-
 	var endpoint string
 
 	if len(c.versions) == 0 {
@@ -173,17 +178,116 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 
 		tagName := route.GetPathWithoutPrefixAndVersion()
 
-		for _, method := range route.Methods {
-			paths[route.Path][strings.ToLower(method)] = Path{
+		for _, rd := range route.RequestDetails {
+
+			queryRequests := ext.Where(rd.Requests, func(rd RequestData) bool {
+				return rd.Type == QuerySource
+			})
+
+			parameters := make([]Parameter, 0)
+
+			for _, qr := range queryRequests {
+				t, v, err := rawReflect(qr.Data)
+
+				if err != nil {
+					return nil, err
+				}
+
+				for i := 0; i < t.NumField(); i++ {
+					field := t.Field(i)
+					value := v.Field(i)
+
+					var fName string
+
+					if field.Tag.Get("name") != "" {
+						fName = field.Tag.Get("name")
+					} else {
+						fName = field.Name
+					}
+
+					parameters = append(parameters, Parameter{
+						Name:        fName,
+						In:          "query",
+						Description: field.Tag.Get("description"),
+						Required:    field.Tag.Get("required") == "true",
+						Schema:      Schema{Type: parseGOTypeToSwaggerType(value.Kind())},
+					})
+				}
+			}
+
+			bodyRequests := ext.Where(rd.Requests, func(rd RequestData) bool {
+				return rd.Type == BodySource
+			})
+
+			var body *Body
+
+			if len(bodyRequests) > 1 {
+				return nil, fmt.Errorf("only one body request is allowed")
+			} else if len(bodyRequests) == 1 {
+				for _, br := range bodyRequests {
+					t, v, err := rawReflect(br.Data)
+
+					if err != nil {
+						return nil, err
+					}
+
+					body = &Body{
+						Content:     map[string]Content{},
+						Description: br.Description,
+						Required:    br.Required,
+					}
+
+					//todo - schema should map and be a ref.
+
+					properties := make(map[string]Property)
+
+					for i := 0; i < t.NumField(); i++ {
+						field := t.Field(i)
+						value := v.Field(i)
+
+						var fName string
+
+						if field.Tag.Get("name") != "" {
+							fName = field.Tag.Get("name")
+						} else {
+							fName = field.Name
+						}
+						properties[fName] = Property{
+							Type:        parseGOTypeToSwaggerType(value.Kind()),
+							Description: field.Tag.Get("description"),
+							Example:     autoType(value.Kind(), value),
+						}
+
+					}
+
+					if len(br.ContentType) == 0 {
+						br.ContentType = []string{"application/json"} // default to application/json if no type is given
+					}
+
+					for _, contentType := range br.ContentType {
+						body.Content[contentType] = Content{
+							Schema: Schema{
+								//todo - pass a ref instead of the raw schema here. add all of the distinct models to the components, then map a reference
+								Properties: properties,
+							},
+						}
+					}
+
+				}
+			}
+
+			paths[route.Path][strings.ToLower(rd.Method)] = Path{
 				Tags:        []string{tagName},
-				Summary:     fmt.Sprintf("%s %s", method, tagName),
-				Description: fmt.Sprintf("%s Operation for %s", method, route.Path),
-				OperationID: fmt.Sprintf("%s-%s", method, route.Path),
-				Parameters:  []Parameter{},
+				Summary:     rd.Summary,
+				Description: rd.Description,
+				OperationID: fmt.Sprintf("%s-%s", rd.Method, route.Path),
+				Parameters:  parameters,
+				RequestBody: body,
 				Responses:   map[string]Response{},
 				Security:    []map[string][]string{},
 			}
 		}
+
 	}
 
 	doc := &SwagDoc{
@@ -213,4 +317,58 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 	}
 
 	return doc, nil
+}
+
+func rawReflect(data any) (reflect.Type, reflect.Value, error) {
+	t := reflect.TypeOf(data)
+	v := reflect.ValueOf(data)
+
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+		v = v.Elem()
+	}
+
+	if t.Kind() != reflect.Struct {
+		return nil, reflect.Value{}, fmt.Errorf("data must be a struct or a pointer to a struct")
+	}
+
+	return t, v, nil
+}
+
+func parseGOTypeToSwaggerType(kind reflect.Kind) string {
+	switch kind {
+	case reflect.String:
+		return "string"
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return "integer"
+	case reflect.Float32, reflect.Float64:
+		return "number"
+	case reflect.Bool:
+		return "boolean"
+	case reflect.Array, reflect.Slice:
+		return "array"
+	case reflect.Map, reflect.Pointer, reflect.Interface, reflect.Struct, reflect.UnsafePointer:
+		return "object"
+	default:
+		return "object"
+	}
+}
+
+func autoType(kind reflect.Kind, value reflect.Value) any {
+	switch kind {
+	case reflect.String:
+		return value.String()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return value.Int()
+	case reflect.Float32, reflect.Float64:
+		return value.Float()
+	case reflect.Bool:
+		return value.Bool()
+	case reflect.Array, reflect.Slice:
+		return value.Slice(0, value.Len())
+	case reflect.Map, reflect.Pointer, reflect.Interface, reflect.Struct, reflect.UnsafePointer:
+		return value.Interface()
+	default:
+		return value.Interface()
+	}
 }

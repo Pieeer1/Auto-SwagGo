@@ -7,12 +7,6 @@ import (
 )
 
 type RequestDataSource string
-type RequestOrResponseType string
-
-type RequestDetails struct {
-	Request  RequestOrResponseType
-	Response RequestOrResponseType
-}
 
 const (
 	FormDataSource         RequestDataSource = "formData"
@@ -24,12 +18,11 @@ const (
 )
 
 type Route struct {
-	Path                 string
-	Methods              []string
-	Handler              http.Handler
-	Prefix               string
-	Version              string
-	RequestsAndResponses []RequestOrResponse
+	Path           string
+	Handler        http.Handler
+	Prefix         string
+	Version        string
+	RequestDetails []RequestDetails
 }
 
 func (r *Route) GetPathWithoutPrefixAndVersion() string {
@@ -52,8 +45,22 @@ type SwaggerInfo struct {
 	Servers                 []string
 }
 
-type RequestOrResponse struct {
-	Type              RequestOrResponseType
-	RequestDataSource *RequestDataSource
-	Data              any
+type RequestDetails struct {
+	Method      string
+	Summary     string
+	Description string
+	Requests    []RequestData
+	Responses   []ResponseData
+}
+
+type RequestData struct {
+	Type        RequestDataSource
+	Description string
+	Required    bool
+	ContentType []string
+	Data        any
+}
+type ResponseData struct {
+	Type RequestDataSource
+	Data any
 }
