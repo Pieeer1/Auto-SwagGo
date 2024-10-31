@@ -87,6 +87,7 @@ type Schema struct {
 	Type       string              `json:"type,omitempty"`
 	Items      *Items              `json:"items,omitempty"`
 	Ref        string              `json:"$ref,omitempty"`
+	Required   []string            `json:"required,omitempty"`
 	Properties map[string]Property `json:"properties,omitempty"`
 }
 
@@ -96,7 +97,6 @@ type Property struct {
 	Format      string   `json:"format,omitempty"`
 	Example     any      `json:"example,omitempty"`
 	Enum        []string `json:"enum,omitempty"`
-	Required    bool     `json:"required,omitempty"`
 }
 
 type Items struct {

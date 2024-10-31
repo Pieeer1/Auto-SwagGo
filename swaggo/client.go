@@ -281,6 +281,8 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 
 		properties := make(map[string]Property)
 
+		requiredProperties := make([]string, 0)
+
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
 			value := v.Field(i)
@@ -293,13 +295,15 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 				fName = field.Name
 			}
 
+			if field.Tag.Get("required") == "true" {
+				requiredProperties = append(requiredProperties, fName)
+			}
+
 			properties[fName] = Property{
 				Type:        parseGOTypeToSwaggerType(value.Kind()),
 				Description: field.Tag.Get("description"),
 				Example:     autoType(value.Kind(), value),
-				Required:    field.Tag.Get("required") == "true",
 			}
-
 		}
 
 		var splitSchemaName = strings.Split(t.String(), ".")
@@ -307,6 +311,7 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 		schemas[splitSchemaName[len(splitSchemaName)-1]] = Schema{
 			Type:       "object",
 			Properties: properties,
+			Required:   requiredProperties,
 		}
 	}
 

@@ -13,7 +13,7 @@ type ExampleQueryStruct struct {
 }
 
 type ExampleBodyStruct struct {
-	ExampleField    string `json:"example_field"`
+	ExampleField    string `json:"example_field" required:"true" description:"Example field"`
 	ExampleIntField int    `json:"example_int_field"`
 }
 
