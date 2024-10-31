@@ -445,7 +445,12 @@ func autoType(kind reflect.Kind, value reflect.Value) any {
 	case reflect.Bool:
 		return value.Bool()
 	case reflect.Array, reflect.Slice:
-		return value.Slice(0, value.Len())
+		arr := value.Slice(0, value.Len())
+		res := make([]any, arr.Len())
+		for i := 0; i < arr.Len(); i++ {
+			res[i] = autoType(arr.Index(i).Kind(), arr.Index(i))
+		}
+		return res
 	case reflect.Map, reflect.Pointer, reflect.Interface, reflect.Struct, reflect.UnsafePointer:
 		return value.Interface()
 	default:

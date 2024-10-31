@@ -57,6 +57,20 @@ import (
 	"net/http"
 )
 
+type ExampleChildrenModels struct {
+	ExampleInts               []int                       `json:"example_ints" required:"true" description:"Example ints"`
+	ExampleChildrenModel      ExampleChildrenModel        `json:"example_children_model" required:"true" description:"Example children model"`
+	ExampleChildrenArrayModel []ExampleChildrenArrayModel `json:"example_children_array_model" required:"true" description:"Example children array model"`
+}
+
+type ExampleChildrenModel struct {
+	ExampleChildrenField string `json:"example_children_field" required:"true" description:"Example children field"`
+}
+
+type ExampleChildrenArrayModel struct {
+	ExampleChildrenInt int `json:"example_children_int" required:"true" description:"Example children int"`
+}
+
 type ExampleQueryStruct struct {
 	ExampleQueryField    string `json:"example_query_field" name:"some custom name" required:"true" description:"Example query field"`
 	ExampleIntQueryField int    `json:"example_int_query_field" required:"false" description:"Example query field"`
@@ -95,6 +109,22 @@ func main() {
 		Method:      "GET",
 		Summary:     "Health Check",
 		Description: "Check the health of the API",
+		Responses: []swaggo.ResponseData{
+			{
+				Code: 200,
+				Data: ExampleChildrenModels{
+					ExampleInts: []int{1, 2, 34},
+					ExampleChildrenModel: ExampleChildrenModel{
+						ExampleChildrenField: "example",
+					},
+					ExampleChildrenArrayModel: []ExampleChildrenArrayModel{
+						{
+							ExampleChildrenInt: 1,
+						},
+					},
+				},
+			},
+		},
 	})
 
 	mux.HandleFunc("/testRouteParam/{param}", health, "v1", swaggo.RequestDetails{
@@ -165,6 +195,7 @@ func health(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
+
 
 ```
 
