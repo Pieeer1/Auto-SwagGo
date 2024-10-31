@@ -22,6 +22,10 @@ type ExampleResponse struct {
 	ExampleIntResponseField int    `json:"example_int_response_field"`
 }
 
+type ExamplePathStruct struct {
+	ExamplePathField string `json:"example_path_field" name:"param" required:"true" description:"Example path field"`
+}
+
 func main() {
 
 	mux := swaggo.NewSwaggoMux(&swaggo.SwaggerInfo{
@@ -41,6 +45,24 @@ func main() {
 		Method:      "GET",
 		Summary:     "Health Check",
 		Description: "Check the health of the API",
+	})
+
+	mux.HandleFunc("/testRouteParam/{param}", health, "v1", swaggo.RequestDetails{
+		Method: "GET",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.PathSource,
+				Data: ExamplePathStruct{
+					ExamplePathField: "example",
+				},
+			},
+			{
+				Type: swaggo.HeaderSource,
+				Data: ExamplePathStruct{
+					ExamplePathField: "example",
+				},
+			},
+		},
 	})
 
 	mux.HandleFunc("/test/testing/testers", health, "v5", swaggo.RequestDetails{

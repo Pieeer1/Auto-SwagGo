@@ -180,13 +180,13 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 
 		for _, rd := range route.RequestDetails {
 
-			queryRequests := ext.Where(rd.Requests, func(rd RequestData) bool {
-				return rd.Type == QuerySource
+			parameterRequests := ext.Where(rd.Requests, func(rd RequestData) bool {
+				return ext.Contains([]RequestDataSource{QuerySource, PathSource, HeaderSource}, rd.Type)
 			})
 
 			parameters := make([]Parameter, 0)
 
-			for _, qr := range queryRequests {
+			for _, qr := range parameterRequests {
 				t, v, err := rawReflect(qr.Data)
 
 				if err != nil {
@@ -207,7 +207,7 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 
 					parameters = append(parameters, Parameter{
 						Name:        fName,
-						In:          "query",
+						In:          string(qr.Type),
 						Description: field.Tag.Get("description"),
 						Required:    field.Tag.Get("required") == "true",
 						Schema:      Schema{Type: parseGOTypeToSwaggerType(value.Kind())},

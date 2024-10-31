@@ -8,6 +8,7 @@ For those that hate maintaining swagger docs manually, this is a http handler th
 1. No Dependencies (should entirely use stl packages to function)
 1. Clean and Easy to Understand Setup
 1. Easy Install 
+1. Enforce "structable" data models for intake and outtake.
 
 ## Mux Features
 
@@ -47,7 +48,6 @@ The above code generates and opens the following swagger:
 ## Full Example
 
 ```go
-
 package main
 
 import (
@@ -72,6 +72,10 @@ type ExampleResponse struct {
 	ExampleIntResponseField int    `json:"example_int_response_field"`
 }
 
+type ExamplePathStruct struct {
+	ExamplePathField string `json:"example_path_field" name:"param" required:"true" description:"Example path field"`
+}
+
 func main() {
 
 	mux := swaggo.NewSwaggoMux(&swaggo.SwaggerInfo{
@@ -91,6 +95,24 @@ func main() {
 		Method:      "GET",
 		Summary:     "Health Check",
 		Description: "Check the health of the API",
+	})
+
+	mux.HandleFunc("/testRouteParam/{param}", health, "v1", swaggo.RequestDetails{
+		Method: "GET",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.PathSource,
+				Data: ExamplePathStruct{
+					ExamplePathField: "example",
+				},
+			},
+			{
+				Type: swaggo.HeaderSource,
+				Data: ExamplePathStruct{
+					ExamplePathField: "example",
+				},
+			},
+		},
 	})
 
 	mux.HandleFunc("/test/testing/testers", health, "v5", swaggo.RequestDetails{
@@ -225,8 +247,20 @@ mux.HandleFunc(
 	})
 ```
 
-## Coming Soon
+## Contributing and What's Coming
 
 The following features are planned and will be coming down the line:
 
-1. Route Parameter support
+1. Squashing some bugs. (please report any issues you find)
+1. More Content Type Support
+
+Feel free to contribute! Prerequisites:
+
+1. Git
+1. Go 1.22.5+
+1. An internet connection. 
+
+- running: `go run .`
+- testing: `go test ./...`
+
+This is still a work in progress! I would recommend testing before production use.
