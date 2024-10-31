@@ -248,6 +248,44 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 				}
 			}
 
+			responses := map[string]Response{}
+
+			if len(rd.Responses) > 0 {
+				for _, res := range rd.Responses {
+					splitTypeName := strings.Split(reflect.TypeOf(res.Data).String(), ".")
+
+					content := map[string]Content{}
+
+					if len(res.ContentType) == 0 {
+						res.ContentType = []string{"application/json"} // default to application/json if no type is given
+					}
+
+					for _, contentType := range res.ContentType {
+						content[contentType] = Content{
+							Schema: Schema{
+								Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
+							},
+						}
+					}
+
+					headerMap := make(map[string]Header)
+
+					for header, value := range res.Headers {
+						headerMap[header] = Header{Schema: Schema{Type: parseGOTypeToSwaggerType(reflect.TypeOf(value).Kind())}}
+					}
+
+					responses[fmt.Sprintf("%d", res.Code)] = Response{
+						Headers:     headerMap,
+						Description: fmt.Sprintf("%d response", res.Code),
+						Content:     content,
+					}
+				}
+			} else {
+				responses[""] = Response{
+					Description: "",
+				}
+			}
+
 			paths[route.Path][strings.ToLower(rd.Method)] = Path{
 				Tags:        []string{tagName},
 				Summary:     rd.Summary,
@@ -255,7 +293,7 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 				OperationID: fmt.Sprintf("%s-%s", rd.Method, route.Path),
 				Parameters:  parameters,
 				RequestBody: body,
-				Responses:   map[string]Response{},
+				Responses:   responses,
 				Security:    []map[string][]string{},
 			}
 		}

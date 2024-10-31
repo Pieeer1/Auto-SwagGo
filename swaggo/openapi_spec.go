@@ -63,9 +63,9 @@ type Parameter struct {
 }
 
 type Response struct {
-	Description string `json:"description"`
-	Content     map[string]Content
-	Headers     map[string]Header
+	Description string             `json:"description"`
+	Content     map[string]Content `json:"content"`
+	Headers     map[string]Header  `json:"headers"`
 }
 
 type Header struct {

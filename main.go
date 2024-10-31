@@ -17,6 +17,11 @@ type ExampleBodyStruct struct {
 	ExampleIntField int    `json:"example_int_field"`
 }
 
+type ExampleResponse struct {
+	ExampleResponseField    string `json:"example_response_field" required:"true" description:"Example response field"`
+	ExampleIntResponseField int    `json:"example_int_response_field"`
+}
+
 func main() {
 
 	mux := swaggo.NewSwaggoMux(&swaggo.SwaggerInfo{
@@ -50,6 +55,15 @@ func main() {
 				Data: ExampleQueryStruct{
 					ExampleQueryField:    "example",
 					ExampleIntQueryField: 1,
+				},
+			},
+		},
+		Responses: []swaggo.ResponseData{
+			{
+				Code: 200,
+				Data: ExampleResponse{
+					ExampleResponseField:    "example",
+					ExampleIntResponseField: 1,
 				},
 			},
 		},

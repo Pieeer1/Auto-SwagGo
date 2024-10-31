@@ -61,6 +61,8 @@ type RequestData struct {
 	Data        any
 }
 type ResponseData struct {
-	Type RequestDataSource
-	Data any
+	Code        int
+	Data        any
+	ContentType []string
+	Headers     map[string]any
 }
