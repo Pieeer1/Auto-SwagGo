@@ -225,50 +225,22 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 				return nil, fmt.Errorf("only one body request is allowed")
 			} else if len(bodyRequests) == 1 {
 				for _, br := range bodyRequests {
-					t, v, err := rawReflect(br.Data)
-
-					if err != nil {
-						return nil, err
-					}
-
 					body = &Body{
 						Content:     map[string]Content{},
 						Description: br.Description,
 						Required:    br.Required,
 					}
 
-					//todo - schema should map and be a ref.
-
-					properties := make(map[string]Property)
-
-					for i := 0; i < t.NumField(); i++ {
-						field := t.Field(i)
-						value := v.Field(i)
-
-						var fName string
-
-						if field.Tag.Get("name") != "" {
-							fName = field.Tag.Get("name")
-						} else {
-							fName = field.Name
-						}
-						properties[fName] = Property{
-							Type:        parseGOTypeToSwaggerType(value.Kind()),
-							Description: field.Tag.Get("description"),
-							Example:     autoType(value.Kind(), value),
-						}
-
-					}
-
 					if len(br.ContentType) == 0 {
 						br.ContentType = []string{"application/json"} // default to application/json if no type is given
 					}
 
+					splitTypeName := strings.Split(reflect.TypeOf(br.Data).String(), ".")
+
 					for _, contentType := range br.ContentType {
 						body.Content[contentType] = Content{
 							Schema: Schema{
-								//todo - pass a ref instead of the raw schema here. add all of the distinct models to the components, then map a reference
-								Properties: properties,
+								Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
 							},
 						}
 					}
@@ -288,6 +260,54 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 			}
 		}
 
+	}
+
+	schemas := make(map[string]Schema)
+
+	distinctRequestTypes := ext.DistinctBy(ext.FlattenMap(c.routes, func(route Route) []RequestData {
+		return ext.FlattenMap(route.RequestDetails, func(requestDetails RequestDetails) []RequestData {
+			return requestDetails.Requests
+		})
+	}), func(reqBody RequestData) string {
+		return reflect.TypeOf(reqBody.Data).String()
+	})
+
+	for _, reqBody := range distinctRequestTypes {
+		t, v, err := rawReflect(reqBody.Data)
+
+		if err != nil {
+			return nil, err
+		}
+
+		properties := make(map[string]Property)
+
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			value := v.Field(i)
+
+			var fName string
+
+			if field.Tag.Get("name") != "" {
+				fName = field.Tag.Get("name")
+			} else {
+				fName = field.Name
+			}
+
+			properties[fName] = Property{
+				Type:        parseGOTypeToSwaggerType(value.Kind()),
+				Description: field.Tag.Get("description"),
+				Example:     autoType(value.Kind(), value),
+				Required:    field.Tag.Get("required") == "true",
+			}
+
+		}
+
+		var splitSchemaName = strings.Split(t.String(), ".")
+
+		schemas[splitSchemaName[len(splitSchemaName)-1]] = Schema{
+			Type:       "object",
+			Properties: properties,
+		}
 	}
 
 	doc := &SwagDoc{
@@ -314,6 +334,9 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 		}),
 		Tags:  tags,
 		Paths: paths,
+		Components: Components{
+			Schemas: schemas,
+		},
 	}
 
 	return doc, nil

@@ -96,6 +96,7 @@ type Property struct {
 	Format      string   `json:"format,omitempty"`
 	Example     any      `json:"example,omitempty"`
 	Enum        []string `json:"enum,omitempty"`
+	Required    bool     `json:"required,omitempty"`
 }
 
 type Items struct {
