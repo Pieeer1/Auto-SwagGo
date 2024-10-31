@@ -272,8 +272,22 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 		return reflect.TypeOf(reqBody.Data).String()
 	})
 
-	for _, reqBody := range distinctRequestTypes {
-		t, v, err := rawReflect(reqBody.Data)
+	distinctResponseTypes := ext.DistinctBy(ext.FlattenMap(c.routes, func(route Route) []ResponseData {
+		return ext.FlattenMap(route.RequestDetails, func(requestDetails RequestDetails) []ResponseData {
+			return requestDetails.Responses
+		})
+	}), func(reqBody ResponseData) string {
+		return reflect.TypeOf(reqBody.Data).String()
+	})
+
+	distinctTypes := append(ext.SliceMap(distinctRequestTypes, func(req RequestData) any {
+		return req.Data
+	}), ext.SliceMap(distinctResponseTypes, func(res ResponseData) any {
+		return res.Data
+	})...)
+
+	for _, data := range distinctTypes {
+		t, v, err := rawReflect(data)
 
 		if err != nil {
 			return nil, err

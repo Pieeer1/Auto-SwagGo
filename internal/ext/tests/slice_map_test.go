@@ -54,3 +54,16 @@ func TestSliceMap(t *testing.T) {
 		t.Error("Expected 2, got", testSliceMapStructsMappedInt[1])
 	}
 }
+
+func TestSliceMapEmpty(t *testing.T) {
+
+	testSliceMapStructs := []TestSliceMapStruct{}
+
+	testSliceMapStructsMapped := ext.SliceMap(testSliceMapStructs, func(d TestSliceMapStruct) string {
+		return d.Name
+	})
+
+	if len(testSliceMapStructsMapped) != 0 {
+		t.Error("Expected 0, got", len(testSliceMapStructsMapped))
+	}
+}
