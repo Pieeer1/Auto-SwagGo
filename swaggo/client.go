@@ -100,7 +100,7 @@ func (c *SwaggoMux) OpenBrowser() {
 func (c *SwaggoMux) swaggerJson(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	mappedDoc, err := c.mapDoc()
+	mappedDoc, err := c.MapDoc()
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -156,7 +156,7 @@ func (c *SwaggoMux) swagger(w http.ResponseWriter, r *http.Request) {
 		`, endpoint)))
 }
 
-func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
+func (c *SwaggoMux) MapDoc() (*SwagDoc, error) {
 
 	tagNames := ext.SliceMap(c.routes, func(route Route) string {
 		return route.GetPathWithoutPrefixAndVersion()
@@ -187,6 +187,11 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 			parameters := make([]Parameter, 0)
 
 			for _, qr := range parameterRequests {
+
+				if qr.Data == nil {
+					continue
+				}
+
 				t, v, err := rawReflect(qr.Data)
 
 				if err != nil {
@@ -307,6 +312,9 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 			return requestDetails.Requests
 		})
 	}), func(reqBody RequestData) string {
+		if reqBody.Data == nil {
+			return ""
+		}
 		return reflect.TypeOf(reqBody.Data).String()
 	})
 
@@ -315,6 +323,9 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 			return requestDetails.Responses
 		})
 	}), func(reqBody ResponseData) string {
+		if reqBody.Data == nil {
+			return ""
+		}
 		return reflect.TypeOf(reqBody.Data).String()
 	})
 
@@ -325,6 +336,11 @@ func (c *SwaggoMux) mapDoc() (*SwagDoc, error) {
 	})...)
 
 	for _, data := range distinctTypes {
+
+		if data == nil {
+			continue
+		}
+
 		t, v, err := rawReflect(data)
 
 		if err != nil {
