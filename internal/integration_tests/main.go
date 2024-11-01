@@ -136,7 +136,8 @@ func main() {
 		},
 		Responses: []swaggo.ResponseData{
 			{
-				Code: 200,
+				Code:        200,
+				ContentType: []string{"application/json", "application/xml"},
 				Data: ExampleResponse{
 					ExampleResponseField:    "example",
 					ExampleIntResponseField: 1,

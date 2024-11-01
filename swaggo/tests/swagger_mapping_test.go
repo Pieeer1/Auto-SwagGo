@@ -22,6 +22,63 @@ type TestChildrenArrayModel struct {
 	ExampleChildrenInt int
 }
 
+func TestSwaggerMapWithAuth(t *testing.T) {
+	swaggoMux := swaggo.NewSwaggoMux(&swaggo.SwaggerInfo{
+		Title: "Test",
+	}, "http://test:8080", "/api", []string{"v1"})
+
+	swaggoMux.HandleFunc("/test", nil, "v1", swaggo.RequestDetails{
+		Method:      "GET",
+		Summary:     "Test",
+		Description: "Test",
+		AuthenticationConfiguration: &swaggo.AuthenticationConfiguration{
+			Oauth2Auth: &swaggo.Oauth2Auth{
+				Flows: swaggo.Oauth2Flows{
+					Implicit: &swaggo.Oauth2Flow{
+						AuthorizationUrl: "http://example.com",
+						Scopes: map[string]string{
+							"read":  "Read access",
+							"write": "Write access",
+						},
+					},
+				},
+			},
+		},
+		OauthScopes: []string{"read"},
+	})
+
+	doc, err := swaggoMux.MapDoc()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if doc.Paths["/api/v1/test"]["get"].Security[0]["oauth2"] == nil {
+		t.Errorf("Expected oauth2, got %s", doc.Paths["/api/v1/test"]["get"].Security[0]["oauth2"])
+	}
+
+	if doc.Components.SecuritySchemes["oauth2"].Flows.Implicit == nil {
+		t.Errorf("Expected implicit oauth2 to exist")
+	}
+
+	if doc.Components.SecuritySchemes["oauth2"].Flows.Implicit.AuthorizationURL != "http://example.com" {
+		t.Errorf("Expected http://example.com, got %s", doc.Components.SecuritySchemes["oauth2"].Flows.Implicit.AuthorizationURL)
+	}
+
+	if doc.Components.SecuritySchemes["oauth2"].Flows.Implicit.Scopes["read"] != "Read access" {
+		t.Errorf("Expected Read access, got %s", doc.Components.SecuritySchemes["oauth2"].Flows.Implicit.Scopes["read"])
+	}
+
+	if doc.Components.SecuritySchemes["oauth2"].Flows.Implicit.Scopes["write"] != "Write access" {
+		t.Errorf("Expected Write access, got %s", doc.Components.SecuritySchemes["oauth2"].Flows.Implicit.Scopes["write"])
+	}
+
+	if doc.Components.SecuritySchemes["oauth2"].Flows.Password != nil {
+		t.Errorf("Expected nil, got %s", doc.Components.SecuritySchemes["oauth2"].Flows.Password)
+	}
+
+}
+
 func TestBaseSwaggerMap(t *testing.T) {
 
 	swaggoMux := swaggo.NewSwaggoMux(&swaggo.SwaggerInfo{
