@@ -46,11 +46,59 @@ type SwaggerInfo struct {
 }
 
 type RequestDetails struct {
-	Method      string
-	Summary     string
+	Method                      string
+	Summary                     string
+	Description                 string
+	AuthenticationConfiguration *AuthenticationConfiguration
+	OauthScopes                 []string
+	Requests                    []RequestData
+	Responses                   []ResponseData
+}
+
+type AuthenticationConfiguration struct {
+	BasicAuth  *BasicAuth
+	BearerAuth *BearerAuth
+	ApiKeyAuth *ApiKeyAuth
+	OpenIdAuth *OpenIdAuth
+	Oauth2Auth *Oauth2Auth
+}
+
+type BasicAuth struct {
+	Name string
+}
+
+type BearerAuth struct {
+	Name string
+}
+
+type ApiKeyAuth struct {
+	In   string
+	Name string
+}
+
+type OpenIdAuth struct {
+	Name             string
+	OpenIdConnectUrl string
+}
+
+type Oauth2Auth struct {
+	Name        string
 	Description string
-	Requests    []RequestData
-	Responses   []ResponseData
+	Flows       Oauth2Flows
+}
+
+type Oauth2Flows struct {
+	Implicit          *Oauth2Flow
+	Password          *Oauth2Flow
+	ClientCredentials *Oauth2Flow
+	AuthorizationCode *Oauth2Flow
+}
+
+type Oauth2Flow struct {
+	AuthorizationUrl string
+	TokenUrl         string
+	RefreshUrl       string
+	Scopes           map[string]string
 }
 
 type RequestData struct {

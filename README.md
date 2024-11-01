@@ -288,7 +288,6 @@ The following features are planned and will be coming down the line:
 ### Currently Missing
 
 1. FormType/MultiformType integration
-1. Full Authentication Setup.
 
 ### Feel free to contribute! Prerequisites:
 

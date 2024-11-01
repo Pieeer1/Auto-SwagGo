@@ -42,6 +42,28 @@ type ExamplePathStruct struct {
 
 func main() {
 
+	authConfiguration := &swaggo.AuthenticationConfiguration{
+		BasicAuth:  &swaggo.BasicAuth{},
+		BearerAuth: &swaggo.BearerAuth{},
+		ApiKeyAuth: &swaggo.ApiKeyAuth{
+			In: "header",
+		},
+		OpenIdAuth: &swaggo.OpenIdAuth{
+			OpenIdConnectUrl: "http://example.com",
+		},
+		Oauth2Auth: &swaggo.Oauth2Auth{
+
+			Flows: swaggo.Oauth2Flows{
+				Implicit: &swaggo.Oauth2Flow{
+					AuthorizationUrl: "http://example.com",
+					Scopes: map[string]string{
+						"read": "Read access",
+					},
+				},
+			},
+		},
+	}
+
 	mux := swaggo.NewSwaggoMux(&swaggo.SwaggerInfo{
 		Title:                   "Test API",
 		Description:             "This is a test API",
@@ -75,6 +97,8 @@ func main() {
 				},
 			},
 		},
+		AuthenticationConfiguration: authConfiguration,
+		OauthScopes:                 []string{"read"},
 	})
 
 	mux.HandleFunc("/testRouteParam/{param}", health, "v1", swaggo.RequestDetails{
@@ -112,7 +136,8 @@ func main() {
 		},
 		Responses: []swaggo.ResponseData{
 			{
-				Code: 200,
+				Code:        200,
+				ContentType: []string{"application/json", "application/xml"},
 				Data: ExampleResponse{
 					ExampleResponseField:    "example",
 					ExampleIntResponseField: 1,
