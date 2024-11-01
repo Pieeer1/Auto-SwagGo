@@ -9,12 +9,10 @@ import (
 type RequestDataSource string
 
 const (
-	FormDataSource         RequestDataSource = "formData"
-	QuerySource            RequestDataSource = "query"
-	PathSource             RequestDataSource = "path"
-	BodySource             RequestDataSource = "body"
-	MultiformContentSource RequestDataSource = "multipart/form-data"
-	HeaderSource           RequestDataSource = "header"
+	QuerySource  RequestDataSource = "query"
+	PathSource   RequestDataSource = "path"
+	BodySource   RequestDataSource = "body"
+	HeaderSource RequestDataSource = "header"
 )
 
 type Route struct {

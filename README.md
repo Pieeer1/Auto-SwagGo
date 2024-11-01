@@ -285,10 +285,6 @@ The following features are planned and will be coming down the line:
 1. Squashing some bugs. (please report any issues you find)
 1. More Content Type Support
 
-### Currently Missing
-
-1. FormType/MultiformType integration
-
 ### Feel free to contribute! Prerequisites:
 
 1. Git

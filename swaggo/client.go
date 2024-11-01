@@ -255,6 +255,10 @@ func parseGOTypeToSwaggerType(kind reflect.Kind) string {
 	}
 }
 
+func isByteArray(field reflect.StructField) bool {
+	return field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Uint8 // uint8 is byte in reflect package
+}
+
 func autoType(kind reflect.Kind, value reflect.Value) any {
 	switch kind {
 	case reflect.String:
@@ -386,8 +390,19 @@ func (c *SwaggoMux) getSchemas() (map[string]Schema, error) {
 				requiredProperties = append(requiredProperties, fName)
 			}
 
+			swagType := parseGOTypeToSwaggerType(value.Kind())
+
+			if swagType == "array" && isByteArray(field) {
+				properties[fName] = Property{
+					Type:        "string",
+					Format:      "binary",
+					Description: field.Tag.Get("description"),
+				}
+				continue
+			}
+
 			properties[fName] = Property{
-				Type:        parseGOTypeToSwaggerType(value.Kind()),
+				Type:        swagType,
 				Description: field.Tag.Get("description"),
 				Example:     autoType(value.Kind(), value),
 			}
