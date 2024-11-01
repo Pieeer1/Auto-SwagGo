@@ -110,17 +110,24 @@ type Components struct {
 }
 
 type SecurityScheme struct {
-	Type  string `json:"type"`
-	Flows Flows  `json:"flows,omitempty"`
-	Name  string `json:"name,omitempty"`
-	In    string `json:"in,omitempty"`
+	Type             string `json:"type"`
+	Flows            *Flows `json:"flows,omitempty"`
+	OpenIdConnectUrl string `json:"openIdConnectUrl,omitempty"`
+	Scheme           string `json:"scheme,omitempty"`
+	Name             string `json:"name,omitempty"`
+	In               string `json:"in,omitempty"`
 }
 
 type Flows struct {
-	Implicit Implicit `json:"implicit,omitempty"`
+	Implicit          *Flow `json:"implicit,omitempty"`
+	Password          *Flow `json:"password,omitempty"`
+	ClientCredentials *Flow `json:"clientCredentials,omitempty"`
+	AuthorizationCode *Flow `json:"authorizationCode,omitempty"`
 }
 
-type Implicit struct {
-	AuthorizationURL string            `json:"authorizationUrl"`
-	Scopes           map[string]string `json:"scopes"`
+type Flow struct {
+	AuthorizationURL string            `json:"authorizationUrl,omitempty"`
+	TokenURL         string            `json:"tokenUrl,omitempty"`
+	RefreshURL       string            `json:"refreshUrl,omitempty"`
+	Scopes           map[string]string `json:"scopes,omitempty"`
 }
