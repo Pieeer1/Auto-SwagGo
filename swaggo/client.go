@@ -1,13 +1,14 @@
 package swaggo
 
 import (
-	"auto-swaggo/internal/ext"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
 	"sync"
+
+	"github.com/Pieeer1/Auto-SwagGo/internal/ext"
 )
 
 var IGNORED_TAGS = []string{"swagger", "openapi.json"}
