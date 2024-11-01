@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/Pieeer1/Auto-SwagGo/swaggo"
 )
@@ -28,8 +29,10 @@ type ExampleQueryStruct struct {
 }
 
 type ExampleBodyStruct struct {
-	ExampleField    string `json:"example_field" required:"true" description:"Example field"`
-	ExampleIntField int    `json:"example_int_field"`
+	ExampleField            string     `json:"example_field" required:"true" description:"Example field"`
+	ExampleIntField         int        `json:"example_int_field"`
+	ExampleTimeField        time.Time  `json:"example_time_field"`
+	ExampleNilableTimeField *time.Time `json:"example_nilable_time_field"`
 }
 
 type ExampleResponse struct {
@@ -155,8 +158,10 @@ func main() {
 			{
 				Type: swaggo.BodySource,
 				Data: ExampleBodyStruct{
-					ExampleField:    "example",
-					ExampleIntField: 1,
+					ExampleField:            "example",
+					ExampleIntField:         1,
+					ExampleTimeField:        time.Now(),
+					ExampleNilableTimeField: nil,
 				},
 			},
 		},
