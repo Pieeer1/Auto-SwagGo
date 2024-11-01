@@ -1,9 +1,10 @@
 package tests
 
 import (
-	"auto-swaggo/internal/ext"
-	"auto-swaggo/swaggo"
 	"testing"
+
+	"github.com/Pieeer1/Auto-SwagGo/internal/ext"
+	"github.com/Pieeer1/Auto-SwagGo/swaggo"
 )
 
 // good test because it covers a large amount of the types possible

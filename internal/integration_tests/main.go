@@ -1,10 +1,11 @@
 package main
 
 import (
-	"auto-swaggo/swaggo"
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/Pieeer1/Auto-SwagGo/swaggo"
 )
 
 type ExampleChildrenModels struct {

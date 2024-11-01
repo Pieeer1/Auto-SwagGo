@@ -1,8 +1,9 @@
 package tests
 
 import (
-	"auto-swaggo/internal/ext"
 	"testing"
+
+	"github.com/Pieeer1/Auto-SwagGo/internal/ext"
 )
 
 func TestContains(t *testing.T) {
