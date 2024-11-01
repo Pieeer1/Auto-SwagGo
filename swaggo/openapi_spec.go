@@ -86,6 +86,7 @@ type Content struct {
 type Schema struct {
 	Type       string              `json:"type,omitempty"`
 	Items      *Items              `json:"items,omitempty"`
+	Format     string              `json:"format,omitempty"`
 	Ref        string              `json:"$ref,omitempty"`
 	Required   []string            `json:"required,omitempty"`
 	Properties map[string]Property `json:"properties,omitempty"`

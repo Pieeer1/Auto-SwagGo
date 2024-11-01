@@ -477,12 +477,22 @@ func (c *SwaggoMux) getPaths() (map[string]map[string]Path, error) {
 						fName = field.Name
 					}
 
+					swagType := parseGOTypeToSwaggerType(value.Kind())
+					var optionalFormat string
+					if swagType == "array" && isByteArray(field) {
+						swagType = "string"
+						optionalFormat = "binary"
+					} else if swagType == "object" && isTime(field) {
+						swagType = "string"
+						optionalFormat = "date-time"
+					}
+
 					parameters = append(parameters, Parameter{
 						Name:        fName,
 						In:          string(qr.Type),
 						Description: field.Tag.Get("description"),
 						Required:    field.Tag.Get("required") == "true",
-						Schema:      Schema{Type: parseGOTypeToSwaggerType(value.Kind())},
+						Schema:      Schema{Type: swagType, Format: optionalFormat},
 					})
 				}
 			}

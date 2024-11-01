@@ -24,8 +24,9 @@ type ExampleChildrenArrayModel struct {
 }
 
 type ExampleQueryStruct struct {
-	ExampleQueryField    string `json:"example_query_field" name:"some custom name" required:"true" description:"Example query field"`
-	ExampleIntQueryField int    `json:"example_int_query_field" required:"false" description:"Example query field"`
+	ExampleQueryField     string    `json:"example_query_field" name:"some custom name" required:"true" description:"Example query field"`
+	ExampleIntQueryField  int       `json:"example_int_query_field" required:"false" description:"Example query field"`
+	ExampleTimeQueryField time.Time `json:"example_time_query_field" required:"false" description:"Example query field"`
 }
 
 type ExampleBodyStruct struct {
@@ -137,8 +138,9 @@ func main() {
 			{
 				Type: swaggo.QuerySource,
 				Data: ExampleQueryStruct{
-					ExampleQueryField:    "example",
-					ExampleIntQueryField: 1,
+					ExampleQueryField:     "example",
+					ExampleIntQueryField:  1,
+					ExampleTimeQueryField: time.Now(),
 				},
 			},
 		},
