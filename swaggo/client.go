@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Pieeer1/Auto-SwagGo/internal/ext"
 )
@@ -260,6 +261,10 @@ func isByteArray(field reflect.StructField) bool {
 	return field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Uint8 // uint8 is byte in reflect package
 }
 
+func isTime(field reflect.StructField) bool {
+	return field.Type == reflect.TypeOf(time.Time{}) || field.Type == reflect.TypeOf(&time.Time{})
+}
+
 func autoType(kind reflect.Kind, value reflect.Value) any {
 	switch kind {
 	case reflect.String:
@@ -397,6 +402,15 @@ func (c *SwaggoMux) getSchemas() (map[string]Schema, error) {
 				properties[fName] = Property{
 					Type:        "string",
 					Format:      "binary",
+					Description: field.Tag.Get("description"),
+				}
+				continue
+			}
+
+			if swagType == "object" && isTime(field) {
+				properties[fName] = Property{
+					Type:        "string",
+					Format:      "date-time",
 					Description: field.Tag.Get("description"),
 				}
 				continue
