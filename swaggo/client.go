@@ -180,6 +180,12 @@ func (c *SwaggoMux) MapDoc() (*SwagDoc, error) {
 		return nil, err
 	}
 
+	requestBodies, err := c.getRequestBodies()
+
+	if err != nil {
+		return nil, err
+	}
+
 	doc := &SwagDoc{
 		OpenAPIVersion: "3.0.2",
 		Info: Info{
@@ -206,6 +212,7 @@ func (c *SwaggoMux) MapDoc() (*SwagDoc, error) {
 		Paths: paths,
 		Components: Components{
 			Schemas:         schemas,
+			RequestBodies:   requestBodies,
 			SecuritySchemes: c.getSecuritySchemas(),
 		},
 	}
@@ -270,6 +277,50 @@ func autoType(kind reflect.Kind, value reflect.Value) any {
 	default:
 		return value.Interface()
 	}
+}
+
+func (c *SwaggoMux) getRequestBodies() (map[string]Body, error) {
+
+	requestBodies := make(map[string]Body)
+
+	distinctRequestBodies := ext.DistinctBy(ext.Where(ext.FlattenMap(ext.FlattenMap(c.routes, func(route Route) []RequestDetails {
+		return route.RequestDetails
+	}), func(requestDetails RequestDetails) []RequestData {
+		return requestDetails.Requests
+	}), func(requestData RequestData) bool {
+		return requestData.Type == BodySource && requestData.Data != nil
+	}), func(requestData RequestData) string {
+		return reflect.TypeOf(requestData.Data).String()
+	})
+
+	for _, reqBody := range distinctRequestBodies {
+
+		content := map[string]Content{}
+
+		splitSchemaName := strings.Split(reflect.TypeOf(reqBody.Data).String(), ".")
+		friendlyName := splitSchemaName[len(splitSchemaName)-1]
+
+		if len(reqBody.ContentType) == 0 {
+			reqBody.ContentType = []string{"application/json"} // default to application/json if no type is given
+		}
+
+		for _, contentType := range reqBody.ContentType {
+			content[contentType] = Content{
+				Schema: Schema{
+					Ref: fmt.Sprintf("#/components/schemas/%s", friendlyName),
+				},
+			}
+		}
+
+		requestBodies[friendlyName] = Body{
+			Content:     content,
+			Description: reqBody.Description,
+			Required:    reqBody.Required,
+		}
+
+	}
+
+	return requestBodies, nil
 }
 
 func (c *SwaggoMux) getSchemas() (map[string]Schema, error) {
