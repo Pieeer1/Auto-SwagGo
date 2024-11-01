@@ -22,7 +22,7 @@ For those that hate maintaining swagger docs manually, this is a http handler th
 
 ## Usage
 
-Install: `go get github.com/Pieeer1/Auto-SwagGo`
+Install: `go get github.com/Pieeer1/Auto-SwagGo/swaggo`
 
 ## Minimum Functioning Setup
 
@@ -296,7 +296,9 @@ The following features are planned and will be coming down the line:
 1. Go 1.22.5+
 1. An internet connection. 
 
-- running: `go run .`
+- running: 
+- - Navigate to /internal/integration_tests/ 
+- - `go run .`
 - testing: `go test ./...`
 
 This is still a work in progress! I would recommend testing before production use.
