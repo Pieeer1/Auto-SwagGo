@@ -22,7 +22,7 @@ For those that hate maintaining swagger docs manually, this is a http handler th
 
 ## Usage
 
-Install: `go get github.com/Pieeer1/Auto-SwagGo/swaggo`
+Install: `go get github.com/Pieeer1/Auto-SwagGo@0.2.1`
 
 ## Minimum Functioning Setup
 
