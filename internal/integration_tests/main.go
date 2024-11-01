@@ -40,6 +40,10 @@ type ExamplePathStruct struct {
 	ExamplePathField string `json:"example_path_field" name:"param" required:"true" description:"Example path field"`
 }
 
+type ExampleFileModel struct {
+	ExampleFileField []byte `json:"example_file_field" required:"true" description:"Example file field"`
+}
+
 func main() {
 
 	authConfiguration := &swaggo.AuthenticationConfiguration{
@@ -156,6 +160,69 @@ func main() {
 			},
 		},
 	})
+
+	mux.HandleFunc("/some-endpoint/with-file", health, "", swaggo.RequestDetails{
+		Method: "POST",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.BodySource,
+				Data: ExampleFileModel{
+					ExampleFileField: []byte{},
+				},
+			},
+		},
+	})
+
+	mux.HandleFunc("/form-endpoint", health, "", swaggo.RequestDetails{
+		Method: "POST",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.BodySource,
+				Data: ExampleBodyStruct{
+					ExampleField:    "example",
+					ExampleIntField: 1,
+				},
+				ContentType: []string{"application/x-www-form-urlencoded"},
+			},
+		}},
+	)
+	mux.HandleFunc("/form-endpoint/with-file", health, "", swaggo.RequestDetails{
+		Method: "POST",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.BodySource,
+				Data: ExampleFileModel{
+					ExampleFileField: []byte{},
+				},
+				ContentType: []string{"application/x-www-form-urlencoded"},
+			},
+		}},
+	)
+	mux.HandleFunc("/form-endpoint/multipart", health, "", swaggo.RequestDetails{
+		Method: "POST",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.BodySource,
+				Data: ExampleBodyStruct{
+					ExampleField:    "example",
+					ExampleIntField: 1,
+				},
+				ContentType: []string{"multipart/form-data"},
+			},
+		}},
+	)
+	mux.HandleFunc("/form-endpoint/multipart-with-file", health, "", swaggo.RequestDetails{
+		Method: "POST",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.BodySource,
+				Data: ExampleFileModel{
+					ExampleFileField: []byte{},
+				},
+				ContentType: []string{"multipart/form-data"},
+			},
+		}},
+	)
 
 	mux.OpenBrowser()
 
