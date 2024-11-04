@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -35,13 +38,10 @@ func NewSwaggoMux(swaggerInfo *SwaggerInfo, baseUri, prefix string, versions []s
 		mu:          sync.RWMutex{},
 	}
 
-	if len(versions) == 0 {
-		client.HandleFunc("/swagger/index.html", client.swagger, "", RequestDetails{Method: "GET"})
-		client.HandleFunc("/openapi.json", client.swaggerJson, "", RequestDetails{Method: "GET"})
-	}
+	client.HandleFunc("/swagger/index.html", client.swagger, "", RequestDetails{Method: "GET"})
+	client.HandleFunc("/openapi.json", client.swaggerJson, "", RequestDetails{Method: "GET"})
 
 	for _, version := range versions {
-		client.HandleFunc("/swagger/index.html", client.swagger, version, RequestDetails{Method: "GET"})
 		client.HandleFunc("/openapi.json", client.swaggerJson, version, RequestDetails{Method: "GET"})
 	}
 
@@ -88,15 +88,7 @@ func (m *SwaggoMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *SwaggoMux) OpenBrowser() {
-	var endpoint string
-
-	if len(c.versions) == 0 {
-		endpoint = fmt.Sprintf("%s%s/swagger/index.html", c.baseUri, c.prefix)
-	} else {
-		endpoint = fmt.Sprintf("%s%s/%s/swagger/index.html", c.baseUri, c.prefix, c.versions[0])
-	}
-
-	openBrowser(endpoint)
+	openBrowser(fmt.Sprintf("%s%s/swagger/index.html", c.baseUri, c.prefix))
 }
 
 func (c *SwaggoMux) swaggerJson(w http.ResponseWriter, r *http.Request) {
@@ -121,41 +113,51 @@ func (c *SwaggoMux) swaggerJson(w http.ResponseWriter, r *http.Request) {
 	w.Write(docRb)
 }
 
+type VersionedUrlSwagger struct {
+	Url  string `json:"url"`
+	Name string `json:"name"`
+}
+
 func (c *SwaggoMux) swagger(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	var endpoint string
+	var swaggerHtml string
 
-	if len(c.versions) == 0 {
-		endpoint = fmt.Sprintf("%s%s/openapi.json", c.baseUri, c.prefix)
-	} else {
-		endpoint = fmt.Sprintf("%s%s/%s/openapi.json", c.baseUri, c.prefix, c.versions[0])
+	_, fileName, _, _ := runtime.Caller(0)
+
+	filePath := filepath.Dir(fileName)
+
+	baseHtml, err := os.ReadFile(fmt.Sprintf("%s/html/index.html", filePath))
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Error reading swagger html file: %s", err.Error())))
+		return
 	}
 
-	w.Write([]byte(fmt.Sprintf(
-		`
-		<!DOCTYPE html>
-			<html lang="en">
-			<head>
-				<meta charset="utf-8" />
-				<meta name="viewport" content="width=device-width, initial-scale=1" />
-				<meta name="description" content="SwaggerUI" />
-				<title>SwaggerUI</title>
-				<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
-			</head>
-			<body>
-			<div id="swagger-ui"></div>
-			<script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js" crossorigin></script>
-				<script>
-					window.onload = () => {
-						window.ui = SwaggerUIBundle({
-						url: '%s', 
-						dom_id: '#swagger-ui',
-						});
-					};
-				</script>
-			</body>
-		</html>
-		`, endpoint)))
+	if len(c.versions) == 0 {
+		endpoint := fmt.Sprintf("%s%s/openapi.json", c.baseUri, c.prefix)
+		swaggerHtml = strings.Replace(string(baseHtml), "{{page_url}}", endpoint, 1)
+	} else {
+		versionedUrls := ext.SliceMap(c.versions, func(version string) VersionedUrlSwagger {
+			return VersionedUrlSwagger{
+				Url:  fmt.Sprintf("%s%s/%s/openapi.json", c.baseUri, c.prefix, version),
+				Name: version,
+			}
+		})
+
+		versionedUrlJsonString, err := json.Marshal(versionedUrls)
+
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("Error marshalling versioned urls: %s", err.Error())))
+		}
+
+		swaggerHtml = strings.Replace(string(baseHtml), "{{is_versioned}}", "true", 1)
+		swaggerHtml = strings.Replace(swaggerHtml, "{{versioned_urls}}", string(versionedUrlJsonString), 1)
+		swaggerHtml = strings.Replace(swaggerHtml, "{{default_name}}", c.versions[0], 1)
+	}
+
+	w.Write([]byte(swaggerHtml))
 }
 
 func (c *SwaggoMux) MapDoc() (*SwagDoc, error) {
