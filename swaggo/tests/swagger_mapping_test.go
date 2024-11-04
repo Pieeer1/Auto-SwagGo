@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Pieeer1/Auto-SwagGo/internal/ext"
@@ -163,4 +164,138 @@ func TestBaseSwaggerMap(t *testing.T) {
 		t.Errorf("Expected string, got %s", doc.Components.Schemas["TestChildrenModels"].Properties["ExampleString"].Type)
 	}
 
+}
+
+func TestSwaggerMappingArray(t *testing.T) {
+
+	swaggoMux := swaggo.NewSwaggoMux(&swaggo.SwaggerInfo{
+		Title: "Test",
+	}, "http://test:8080", "/api", []string{"v1"})
+
+	swaggoMux.HandleFunc("/test", nil, "v1", swaggo.RequestDetails{
+		Method:      "GET",
+		Summary:     "Test",
+		Description: "Test",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.BodySource,
+				Data: []TestChildrenModels{
+					{
+						ExampleString: "example",
+						ExampleInts:   []int{1, 2, 34},
+						ExampleChildrenModel: TestChildrenModel{
+							ExampleChildrenField: "second example",
+						},
+						ExampleChildrenArrayModel: []TestChildrenArrayModel{
+							{
+								ExampleChildrenInt: 1,
+							},
+						},
+					},
+				},
+				Description: "Test",
+				Required:    true,
+				ContentType: []string{"application/json"},
+			},
+		},
+		Responses: []swaggo.ResponseData{
+			{
+				Code: 200,
+				Data: []TestChildrenModels{ // TODO - FIX BUG WHERE EMPTY ARRAY CHILDREN WILL PANIC
+					{
+						ExampleString: "example",
+						ExampleInts:   []int{1, 2, 34},
+						ExampleChildrenModel: TestChildrenModel{
+							ExampleChildrenField: "second example",
+						},
+						ExampleChildrenArrayModel: []TestChildrenArrayModel{
+							{
+								ExampleChildrenInt: 1,
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	doc, err := swaggoMux.MapDoc()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	test := doc.Paths["/api/v1/test"]["get"].Responses["200"]
+
+	fmt.Printf("%+v\n", test)
+
+	if doc.Paths["/api/v1/test"]["get"].Responses["200"].Content["application/json"].Schema.Type != "array" {
+		t.Errorf("Expected array, got %s", doc.Paths["/api/v1/test"]["get"].Responses["200"].Content["application/json"].Schema.Type)
+	}
+
+	if doc.Paths["/api/v1/test"]["get"].Responses["200"].Content["application/json"].Schema.Items.Ref != "#/components/schemas/TestChildrenModels" {
+		t.Errorf("Expected valdi schema item ref, got %s", doc.Paths["/api/v1/test"]["get"].Responses["200"].Content["application/json"].Schema.Items.Ref)
+	}
+
+	if doc.Paths["/api/v1/test"]["get"].RequestBody.Content["application/json"].Schema.Type != "array" {
+		t.Errorf("Expected array, got %s", doc.Paths["/api/v1/test"]["get"].RequestBody.Content["application/json"].Schema.Type)
+	}
+
+	if doc.Paths["/api/v1/test"]["get"].RequestBody.Content["application/json"].Schema.Items.Ref != "#/components/schemas/TestChildrenModels" {
+		t.Errorf("Expected valdi schema item ref, got %s", doc.Paths["/api/v1/test"]["get"].RequestBody.Content["application/json"].Schema.Items.Ref)
+	}
+
+}
+
+func TestSwaggerMappingEmptyChildArray(t *testing.T) {
+	swaggoMux := swaggo.NewSwaggoMux(&swaggo.SwaggerInfo{
+		Title: "Test",
+	}, "http://test:8080", "/api", []string{"v1"})
+
+	swaggoMux.HandleFunc("/test", nil, "v1", swaggo.RequestDetails{
+		Method:      "GET",
+		Summary:     "Test",
+		Description: "Test",
+		Requests: []swaggo.RequestData{
+			{
+				Type:        swaggo.BodySource,
+				Data:        []TestChildrenModels{}, // point of this test. Need to validate empty array's can be passed in request body
+				Description: "Test",
+				Required:    true,
+				ContentType: []string{"application/json"},
+			},
+		},
+		Responses: []swaggo.ResponseData{
+			{
+				Code: 200,
+				Data: []TestChildrenModels{}, // as well as empty array's in response
+			},
+		},
+	})
+
+	doc, err := swaggoMux.MapDoc()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	test := doc.Paths["/api/v1/test"]["get"].Responses["200"]
+
+	fmt.Printf("%+v\n", test)
+
+	if doc.Paths["/api/v1/test"]["get"].Responses["200"].Content["application/json"].Schema.Type != "array" {
+		t.Errorf("Expected array, got %s", doc.Paths["/api/v1/test"]["get"].Responses["200"].Content["application/json"].Schema.Type)
+	}
+
+	if doc.Paths["/api/v1/test"]["get"].Responses["200"].Content["application/json"].Schema.Items.Ref != "#/components/schemas/TestChildrenModels" {
+		t.Errorf("Expected valdi schema item ref, got %s", doc.Paths["/api/v1/test"]["get"].Responses["200"].Content["application/json"].Schema.Items.Ref)
+	}
+
+	if doc.Paths["/api/v1/test"]["get"].RequestBody.Content["application/json"].Schema.Type != "array" {
+		t.Errorf("Expected array, got %s", doc.Paths["/api/v1/test"]["get"].RequestBody.Content["application/json"].Schema.Type)
+	}
+
+	if doc.Paths["/api/v1/test"]["get"].RequestBody.Content["application/json"].Schema.Items.Ref != "#/components/schemas/TestChildrenModels" {
+		t.Errorf("Expected valdi schema item ref, got %s", doc.Paths["/api/v1/test"]["get"].RequestBody.Content["application/json"].Schema.Items.Ref)
+	}
 }
