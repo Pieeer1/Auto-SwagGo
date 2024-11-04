@@ -299,3 +299,78 @@ func TestSwaggerMappingEmptyChildArray(t *testing.T) {
 		t.Errorf("Expected valdi schema item ref, got %s", doc.Paths["/api/v1/test"]["get"].RequestBody.Content["application/json"].Schema.Items.Ref)
 	}
 }
+
+func TestSwaggerMappingVersioning(t *testing.T) {
+	swaggoMux := swaggo.NewSwaggoMux(&swaggo.SwaggerInfo{
+		Title: "Test",
+	}, "http://test:8080", "/api", []string{"v1", "v2"})
+
+	swaggoMux.HandleFunc("/test", nil, "", swaggo.RequestDetails{
+		Method:      "GET",
+		Summary:     "Test",
+		Description: "Test",
+	})
+
+	swaggoMux.HandleFunc("/test", nil, "v1", swaggo.RequestDetails{
+		Method:      "GET",
+		Summary:     "Test",
+		Description: "Test",
+	})
+
+	swaggoMux.HandleFunc("/test", nil, "v2", swaggo.RequestDetails{
+		Method:      "GET",
+		Summary:     "Test",
+		Description: "Test",
+	})
+
+	doc, err := swaggoMux.MapDoc("")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(doc.Paths) != 3 {
+		t.Errorf("Expected 3 paths, got %d", len(doc.Paths))
+	}
+
+	if doc.Paths["/api/test"]["get"].Summary != "Test" {
+		t.Errorf("Expected Test, got %s", doc.Paths["/api/test"]["get"].Summary)
+	}
+
+	if doc.Paths["/api/v1/test"]["get"].Summary != "Test" {
+		t.Errorf("Expected Test, got %s", doc.Paths["/api/v1/test"]["get"].Summary)
+	}
+
+	if doc.Paths["/api/v2/test"]["get"].Summary != "Test" {
+		t.Errorf("Expected Test, got %s", doc.Paths["/api/v2/test"]["get"].Summary)
+	}
+
+	docv1, err := swaggoMux.MapDoc("v1")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(docv1.Paths) != 1 {
+		t.Errorf("Expected 1 paths, got %d", len(docv1.Paths))
+	}
+
+	if docv1.Paths["/api/v1/test"]["get"].Summary != "Test" {
+		t.Errorf("Expected Test, got %s", docv1.Paths["/api/v1/test"]["get"].Summary)
+	}
+
+	docv2, err := swaggoMux.MapDoc("v2")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(docv2.Paths) != 1 {
+		t.Errorf("Expected 1 paths, got %d", len(docv2.Paths))
+	}
+
+	if docv2.Paths["/api/v2/test"]["get"].Summary != "Test" {
+		t.Errorf("Expected Test, got %s", docv2.Paths["/api/v2/test"]["get"].Summary)
+	}
+
+}
