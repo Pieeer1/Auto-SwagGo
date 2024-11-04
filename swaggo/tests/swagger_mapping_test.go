@@ -49,7 +49,7 @@ func TestSwaggerMapWithAuth(t *testing.T) {
 		OauthScopes: []string{"read"},
 	})
 
-	doc, err := swaggoMux.MapDoc()
+	doc, err := swaggoMux.MapDoc("")
 
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +118,7 @@ func TestBaseSwaggerMap(t *testing.T) {
 		},
 	})
 
-	doc, err := swaggoMux.MapDoc()
+	doc, err := swaggoMux.MapDoc("")
 
 	if err != nil {
 		t.Fatal(err)
@@ -219,7 +219,7 @@ func TestSwaggerMappingArray(t *testing.T) {
 		},
 	})
 
-	doc, err := swaggoMux.MapDoc()
+	doc, err := swaggoMux.MapDoc("")
 
 	if err != nil {
 		t.Fatal(err)
@@ -273,7 +273,7 @@ func TestSwaggerMappingEmptyChildArray(t *testing.T) {
 		},
 	})
 
-	doc, err := swaggoMux.MapDoc()
+	doc, err := swaggoMux.MapDoc("")
 
 	if err != nil {
 		t.Fatal(err)

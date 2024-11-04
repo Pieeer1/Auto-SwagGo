@@ -39,10 +39,14 @@ func NewSwaggoMux(swaggerInfo *SwaggerInfo, baseUri, prefix string, versions []s
 	}
 
 	client.HandleFunc("/swagger/index.html", client.swagger, "", RequestDetails{Method: "GET"})
-	client.HandleFunc("/openapi.json", client.swaggerJson, "", RequestDetails{Method: "GET"})
+	client.HandleFunc("/openapi.json", func(w http.ResponseWriter, r *http.Request) {
+		client.swaggerJson(w, "")
+	}, "", RequestDetails{Method: "GET"})
 
 	for _, version := range versions {
-		client.HandleFunc("/openapi.json", client.swaggerJson, version, RequestDetails{Method: "GET"})
+		client.HandleFunc("/openapi.json", func(w http.ResponseWriter, r *http.Request) {
+			client.swaggerJson(w, version)
+		}, version, RequestDetails{Method: "GET"})
 	}
 
 	return client
@@ -91,10 +95,10 @@ func (c *SwaggoMux) OpenBrowser() {
 	openBrowser(fmt.Sprintf("%s%s/swagger/index.html", c.baseUri, c.prefix))
 }
 
-func (c *SwaggoMux) swaggerJson(w http.ResponseWriter, r *http.Request) {
+func (c *SwaggoMux) swaggerJson(w http.ResponseWriter, version string) {
 	w.Header().Set("Content-Type", "application/json")
 
-	mappedDoc, err := c.MapDoc()
+	mappedDoc, err := c.MapDoc(version)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -138,11 +142,17 @@ func (c *SwaggoMux) swagger(w http.ResponseWriter, r *http.Request) {
 		endpoint := fmt.Sprintf("%s%s/openapi.json", c.baseUri, c.prefix)
 		swaggerHtml = strings.Replace(string(baseHtml), "{{page_url}}", endpoint, 1)
 	} else {
+
 		versionedUrls := ext.SliceMap(c.versions, func(version string) VersionedUrlSwagger {
 			return VersionedUrlSwagger{
 				Url:  fmt.Sprintf("%s%s/%s/openapi.json", c.baseUri, c.prefix, version),
 				Name: version,
 			}
+		})
+
+		versionedUrls = ext.Push(versionedUrls, VersionedUrlSwagger{
+			Url:  fmt.Sprintf("%s%s/openapi.json", c.baseUri, c.prefix),
+			Name: "All",
 		})
 
 		versionedUrlJsonString, err := json.Marshal(versionedUrls)
@@ -160,9 +170,11 @@ func (c *SwaggoMux) swagger(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(swaggerHtml))
 }
 
-func (c *SwaggoMux) MapDoc() (*SwagDoc, error) {
+func (c *SwaggoMux) MapDoc(version string) (*SwagDoc, error) {
 
-	tagNames := ext.SliceMap(c.routes, func(route Route) string {
+	tagNames := ext.SliceMap(ext.Where(c.routes, func(route Route) bool {
+		return (version == "" || route.Version == version)
+	}), func(route Route) string {
 		return route.GetPathWithoutPrefixAndVersion()
 	})
 
@@ -172,19 +184,19 @@ func (c *SwaggoMux) MapDoc() (*SwagDoc, error) {
 		return Tag{Name: tagName, Description: fmt.Sprintf("Operations for %s", tagName)}
 	})
 
-	paths, err := c.getPaths()
+	paths, err := c.getPaths(version)
 
 	if err != nil {
 		return nil, err
 	}
 
-	schemas, err := c.getSchemas()
+	schemas, err := c.getSchemas(version)
 
 	if err != nil {
 		return nil, err
 	}
 
-	requestBodies, err := c.getRequestBodies()
+	requestBodies, err := c.getRequestBodies(version)
 
 	if err != nil {
 		return nil, err
@@ -308,11 +320,13 @@ func autoType(kind reflect.Kind, value reflect.Value) any {
 	}
 }
 
-func (c *SwaggoMux) getRequestBodies() (map[string]Body, error) {
+func (c *SwaggoMux) getRequestBodies(version string) (map[string]Body, error) {
 
 	requestBodies := make(map[string]Body)
 
-	distinctRequestBodies := ext.DistinctBy(ext.Where(ext.FlattenMap(ext.FlattenMap(c.routes, func(route Route) []RequestDetails {
+	distinctRequestBodies := ext.DistinctBy(ext.Where(ext.FlattenMap(ext.FlattenMap(ext.Where(c.routes, func(route Route) bool {
+		return (version == "" || route.Version == version)
+	}), func(route Route) []RequestDetails {
 		return route.RequestDetails
 	}), func(requestDetails RequestDetails) []RequestData {
 		return requestDetails.Requests
@@ -352,10 +366,12 @@ func (c *SwaggoMux) getRequestBodies() (map[string]Body, error) {
 	return requestBodies, nil
 }
 
-func (c *SwaggoMux) getSchemas() (map[string]Schema, error) {
+func (c *SwaggoMux) getSchemas(version string) (map[string]Schema, error) {
 	schemas := make(map[string]Schema)
 
-	distinctRequestTypes := ext.DistinctBy(ext.FlattenMap(c.routes, func(route Route) []RequestData {
+	distinctRequestTypes := ext.DistinctBy(ext.FlattenMap(ext.Where(c.routes, func(route Route) bool {
+		return (version == "" || route.Version == version)
+	}), func(route Route) []RequestData {
 		return ext.FlattenMap(route.RequestDetails, func(requestDetails RequestDetails) []RequestData {
 			return requestDetails.Requests
 		})
@@ -453,11 +469,11 @@ func (c *SwaggoMux) getSchemas() (map[string]Schema, error) {
 	return schemas, nil
 }
 
-func (c *SwaggoMux) getPaths() (map[string]map[string]Path, error) {
+func (c *SwaggoMux) getPaths(version string) (map[string]map[string]Path, error) {
 	paths := make(map[string]map[string]Path)
 
 	for _, route := range ext.Where(c.routes, func(route Route) bool {
-		return !ext.Contains(IGNORED_TAGS, route.GetPathWithoutPrefixAndVersion())
+		return !ext.Contains(IGNORED_TAGS, route.GetPathWithoutPrefixAndVersion()) && (version == "" || route.Version == version)
 	}) {
 
 		paths[route.Path] = make(map[string]Path)
