@@ -233,7 +233,7 @@ func main() {
 	)
 
 	mux.HandleFunc("/test-array", health, "", swaggo.RequestDetails{
-		Method: "GET",
+		Method: "POST",
 		Requests: []swaggo.RequestData{
 			{
 				Type: swaggo.BodySource,
