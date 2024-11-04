@@ -231,8 +231,15 @@ func rawReflect(data any) (reflect.Type, reflect.Value, error) {
 		v = v.Elem()
 	}
 
-	if t.Kind() != reflect.Struct {
-		return nil, reflect.Value{}, fmt.Errorf("data must be a struct or a pointer to a struct")
+	if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+		t = t.Elem()
+		v = v.Index(0)
+	}
+
+	kind := t.Kind()
+
+	if !(kind == reflect.Struct || kind == reflect.Array || kind == reflect.Slice) {
+		return nil, reflect.Value{}, fmt.Errorf("data must be a struct or a pointer to a struct, or an array. Got %s", kind.String())
 	}
 
 	return t, v, nil
@@ -255,6 +262,11 @@ func parseGOTypeToSwaggerType(kind reflect.Kind) string {
 	default:
 		return "object"
 	}
+}
+
+func isArray(data any) bool {
+	t := reflect.TypeOf(data)
+	return t.Kind() == reflect.Slice || t.Kind() == reflect.Array
 }
 
 func isByteArray(field reflect.StructField) bool {
@@ -519,14 +531,28 @@ func (c *SwaggoMux) getPaths() (map[string]map[string]Path, error) {
 
 					splitTypeName := strings.Split(reflect.TypeOf(br.Data).String(), ".")
 
-					for _, contentType := range br.ContentType {
-						body.Content[contentType] = Content{
-							Schema: Schema{
-								Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
-							},
+					bodyIsArray := isArray(br.Data)
+
+					if bodyIsArray {
+						for _, contentType := range br.ContentType {
+							body.Content[contentType] = Content{
+								Schema: Schema{
+									Type: "array",
+									Items: &Items{
+										Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
+									},
+								},
+							}
+						}
+					} else {
+						for _, contentType := range br.ContentType {
+							body.Content[contentType] = Content{
+								Schema: Schema{
+									Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
+								},
+							}
 						}
 					}
-
 				}
 			}
 
@@ -542,11 +568,26 @@ func (c *SwaggoMux) getPaths() (map[string]map[string]Path, error) {
 						res.ContentType = []string{"application/json"} // default to application/json if no type is given
 					}
 
-					for _, contentType := range res.ContentType {
-						content[contentType] = Content{
-							Schema: Schema{
-								Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
-							},
+					responseIsArray := isArray(res.Data)
+
+					if responseIsArray {
+						for _, contentType := range res.ContentType {
+							content[contentType] = Content{
+								Schema: Schema{
+									Type: "array",
+									Items: &Items{
+										Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
+									},
+								},
+							}
+						}
+					} else {
+						for _, contentType := range res.ContentType {
+							content[contentType] = Content{
+								Schema: Schema{
+									Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
+								},
+							}
 						}
 					}
 

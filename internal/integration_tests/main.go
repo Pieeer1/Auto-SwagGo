@@ -232,6 +232,22 @@ func main() {
 		}},
 	)
 
+	mux.HandleFunc("/test-array", health, "", swaggo.RequestDetails{
+		Method: "GET",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.BodySource,
+				Data: []ExampleBodyStruct{{}},
+			},
+		},
+		Responses: []swaggo.ResponseData{
+			{
+				Code: 200,
+				Data: []ExampleResponse{{}},
+			},
+		},
+	})
+
 	mux.OpenBrowser()
 
 	err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", "8080"), mux)
