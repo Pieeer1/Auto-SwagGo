@@ -233,6 +233,11 @@ func rawReflect(data any) (reflect.Type, reflect.Value, error) {
 
 	if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
 		t = t.Elem()
+
+		if v.Len() == 0 {
+			v = reflect.MakeSlice(reflect.SliceOf(t), 1, 1)
+		}
+
 		v = v.Index(0)
 	}
 
