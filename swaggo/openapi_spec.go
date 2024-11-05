@@ -105,7 +105,7 @@ type Property struct {
 type Components struct {
 	Schemas         map[string]Schema         `json:"schemas"`
 	RequestBodies   map[string]Body           `json:"requestBodies"`
-	SecuritySchemes map[string]SecurityScheme `json:"securitySchemes"`
+	SecuritySchemes map[string]SecurityScheme `json:"securitySchemes,omitempty"`
 }
 
 type SecurityScheme struct {
