@@ -382,7 +382,9 @@ func (c *SwaggoMux) getSchemas(version string) (map[string]Schema, error) {
 		return reflect.TypeOf(reqBody.Data).String()
 	})
 
-	distinctResponseTypes := ext.DistinctBy(ext.FlattenMap(c.routes, func(route Route) []ResponseData {
+	distinctResponseTypes := ext.DistinctBy(ext.FlattenMap(ext.Where(c.routes, func(route Route) bool {
+		return (version == "" || route.Version == version)
+	}), func(route Route) []ResponseData {
 		return ext.FlattenMap(route.RequestDetails, func(requestDetails RequestDetails) []ResponseData {
 			return requestDetails.Responses
 		})
