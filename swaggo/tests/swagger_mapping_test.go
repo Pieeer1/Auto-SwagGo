@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Pieeer1/Auto-SwagGo/internal/ext"
 	"github.com/Pieeer1/Auto-SwagGo/swaggo"
 )
 
@@ -152,15 +151,19 @@ func TestBaseSwaggerMap(t *testing.T) {
 		t.Errorf("Expected array, got %s", doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Type)
 	}
 
-	if ext.SequenceEqual(doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Example.([]interface{}), []any{"integer"}) {
-		t.Errorf("Expected string, got %s", doc.Components.Schemas["TestChildrenModels"].Properties["ExampleString"].Type)
+	test := doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Items.Type
+
+	fmt.Printf("%+v\n", test)
+
+	if doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Items.Type != "integer" {
+		t.Errorf("Expected integer, got %s", doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Items.Type)
 	}
 
 	if doc.Components.Schemas["TestChildrenModels"].Properties["ExampleChildrenModel"].Type != "object" {
 		t.Errorf("Expected object, got %s", doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Type)
 	}
 
-	if doc.Components.Schemas["TestChildrenModels"].Properties["ExampleChildrenModel"].Example.(TestChildrenModel).ExampleChildrenField != "second example" {
+	if doc.Components.Schemas["TestChildrenModels"].Properties["ExampleChildrenModel"].Properties["ExampleChildrenField"].Type != "string" {
 		t.Errorf("Expected string, got %s", doc.Components.Schemas["TestChildrenModels"].Properties["ExampleString"].Type)
 	}
 
