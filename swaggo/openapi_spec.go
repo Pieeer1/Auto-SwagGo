@@ -85,7 +85,7 @@ type Content struct {
 
 type Schema struct {
 	Type       string              `json:"type,omitempty"`
-	Items      *Items              `json:"items,omitempty"`
+	Items      *Schema             `json:"items,omitempty"`
 	Format     string              `json:"format,omitempty"`
 	Ref        string              `json:"$ref,omitempty"`
 	Required   []string            `json:"required,omitempty"`
@@ -93,15 +93,13 @@ type Schema struct {
 }
 
 type Property struct {
-	Type        string   `json:"type,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Format      string   `json:"format,omitempty"`
-	Example     any      `json:"example,omitempty"`
-	Enum        []string `json:"enum,omitempty"`
-}
-
-type Items struct {
-	Ref string `json:"$ref,omitempty"`
+	Type        string              `json:"type,omitempty"`
+	Properties  map[string]Property `json:"properties,omitempty"` // relevant for object type
+	Items       *Schema             `json:"items,omitempty"`
+	Description string              `json:"description,omitempty"`
+	Format      string              `json:"format,omitempty"`
+	Example     any                 `json:"example,omitempty"`
+	Enum        []string            `json:"enum,omitempty"`
 }
 
 type Components struct {

@@ -9,6 +9,25 @@ import (
 	"github.com/Pieeer1/Auto-SwagGo/swaggo"
 )
 
+type SomeRidiculousModelForTesting struct {
+	ExampleRidiculousParent  ExampleRidiculousParent
+	ExampleRidiculousParents []ExampleRidiculousParent
+}
+
+type ExampleRidiculousParent struct {
+	ExampleRidiculousChild []ExampleRidiculousChild
+}
+
+type ExampleRidiculousChild struct {
+	ExampleRidiculousGrandChild []ExampleRidiculousGrandChild
+}
+type ExampleRidiculousGrandChild struct {
+	ExampleRidiculousGreatGrandChild ExampleRidiculousGreatGrandChild
+}
+type ExampleRidiculousGreatGrandChild struct {
+	Example string `json:"example" required:"true" description:"Example"`
+}
+
 type ExampleChildrenModels struct {
 	ExampleInts               []int                       `json:"example_ints" required:"true" description:"Example ints"`
 	ExampleChildrenModel      ExampleChildrenModel        `json:"example_children_model" required:"true" description:"Example children model"`
@@ -101,6 +120,41 @@ func main() {
 					ExampleChildrenArrayModel: []ExampleChildrenArrayModel{
 						{
 							ExampleChildrenInt: 1,
+						},
+					},
+				},
+			},
+			{
+				Code: 500,
+				Data: []SomeRidiculousModelForTesting{
+					{
+						ExampleRidiculousParent: ExampleRidiculousParent{
+							ExampleRidiculousChild: []ExampleRidiculousChild{
+								{
+									ExampleRidiculousGrandChild: []ExampleRidiculousGrandChild{
+										{
+											ExampleRidiculousGreatGrandChild: ExampleRidiculousGreatGrandChild{
+												Example: "example",
+											},
+										},
+									},
+								},
+							},
+						},
+						ExampleRidiculousParents: []ExampleRidiculousParent{
+							{
+								ExampleRidiculousChild: []ExampleRidiculousChild{
+									{
+										ExampleRidiculousGrandChild: []ExampleRidiculousGrandChild{
+											{
+												ExampleRidiculousGreatGrandChild: ExampleRidiculousGreatGrandChild{
+													Example: "example",
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
