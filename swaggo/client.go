@@ -411,62 +411,143 @@ func (c *SwaggoMux) getSchemas(version string) (map[string]Schema, error) {
 			return nil, err
 		}
 
-		properties := make(map[string]Property)
+		schema, err := mapChildPropertiesToSchema(t, v)
 
-		requiredProperties := make([]string, 0)
-
-		for i := 0; i < t.NumField(); i++ {
-			field := t.Field(i)
-			value := v.Field(i)
-
-			var fName string
-
-			if field.Tag.Get("name") != "" {
-				fName = field.Tag.Get("name")
-			} else {
-				fName = field.Name
-			}
-
-			if field.Tag.Get("required") == "true" {
-				requiredProperties = append(requiredProperties, fName)
-			}
-
-			swagType := parseGOTypeToSwaggerType(value.Kind())
-
-			if swagType == "array" && isByteArray(field) {
-				properties[fName] = Property{
-					Type:        "string",
-					Format:      "binary",
-					Description: field.Tag.Get("description"),
-				}
-				continue
-			}
-
-			if swagType == "object" && isTime(field) {
-				properties[fName] = Property{
-					Type:        "string",
-					Format:      "date-time",
-					Description: field.Tag.Get("description"),
-				}
-				continue
-			}
-
-			properties[fName] = Property{
-				Type:        swagType,
-				Description: field.Tag.Get("description"),
-				Example:     autoType(value.Kind(), value),
-			}
+		if err != nil {
+			return nil, err
 		}
 
 		var splitSchemaName = strings.Split(t.String(), ".")
 
-		schemas[splitSchemaName[len(splitSchemaName)-1]] = Schema{
-			Type:       "object",
-			Properties: properties,
-			Required:   requiredProperties,
-		}
+		schemas[splitSchemaName[len(splitSchemaName)-1]] = schema
 	}
 	return schemas, nil
+}
+
+func mapChildPropertiesToSchema(t reflect.Type, v reflect.Value) (Schema, error) {
+
+	properties := make(map[string]Property)
+	requiredProperties := make([]string, 0)
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		value := v.Field(i)
+
+		var fName string
+
+		if field.Tag.Get("name") != "" {
+			fName = field.Tag.Get("name")
+		} else {
+			fName = field.Name
+		}
+
+		if field.Tag.Get("required") == "true" {
+			requiredProperties = append(requiredProperties, fName)
+		}
+
+		swagType := parseGOTypeToSwaggerType(value.Kind())
+
+		if swagType == "array" && isByteArray(field) {
+			properties[fName] = Property{
+				Type:        "string",
+				Format:      "binary",
+				Description: field.Tag.Get("description"),
+			}
+			continue
+		}
+
+		if swagType == "array" {
+
+			arrayType := value.Type().Elem()
+
+			var childItemValue Schema
+
+			parsedType := parseGOTypeToSwaggerType(arrayType.Kind())
+
+			if parsedType == "array" {
+
+				if value.Len() == 0 {
+					value = reflect.MakeSlice(reflect.SliceOf(arrayType), 1, 1)
+				}
+
+				arrayValue := value.Index(0)
+
+				newT, newV, err := rawReflect(autoType(arrayValue.Kind(), arrayValue))
+
+				if err != nil {
+					return Schema{}, err
+				}
+
+				childItemValue, err = mapChildPropertiesToSchema(newT, newV)
+
+				if err != nil {
+					return Schema{}, err
+				}
+			} else if parsedType == "object" {
+				newT, newV, err := rawReflect(autoType(arrayType.Kind(), value))
+
+				if err != nil {
+					return Schema{}, err
+				}
+
+				childItemValue, err = mapChildPropertiesToSchema(newT, newV)
+
+				if err != nil {
+					return Schema{}, err
+				}
+			} else {
+				childItemValue = Schema{
+					Type: parsedType,
+				}
+			}
+
+			properties[fName] = Property{
+				Type:        "array",
+				Items:       &childItemValue,
+				Description: field.Tag.Get("description"),
+			}
+			continue
+		} else if swagType == "object" && isTime(field) {
+			properties[fName] = Property{
+				Type:        "string",
+				Format:      "date-time",
+				Description: field.Tag.Get("description"),
+			}
+			continue
+		} else if swagType == "object" {
+
+			newT, newV, err := rawReflect(autoType(value.Kind(), value))
+
+			if err != nil {
+				return Schema{}, err
+			}
+
+			childItemValue, err := mapChildPropertiesToSchema(newT, newV)
+
+			if err != nil {
+				return Schema{}, err
+			}
+
+			properties[fName] = Property{
+				Type:        "object",
+				Properties:  childItemValue.Properties,
+				Description: field.Tag.Get("description"),
+			}
+			continue
+		}
+
+		properties[fName] = Property{
+			Type:        swagType,
+			Description: field.Tag.Get("description"),
+			Example:     autoType(value.Kind(), value),
+		}
+	}
+
+	return Schema{
+		Type:       "object",
+		Properties: properties,
+		Required:   requiredProperties,
+	}, nil
 }
 
 func (c *SwaggoMux) getPaths(version string) (map[string]map[string]Path, error) {
@@ -561,7 +642,7 @@ func (c *SwaggoMux) getPaths(version string) (map[string]map[string]Path, error)
 							body.Content[contentType] = Content{
 								Schema: Schema{
 									Type: "array",
-									Items: &Items{
+									Items: &Schema{
 										Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
 									},
 								},
@@ -598,7 +679,7 @@ func (c *SwaggoMux) getPaths(version string) (map[string]map[string]Path, error)
 							content[contentType] = Content{
 								Schema: Schema{
 									Type: "array",
-									Items: &Items{
+									Items: &Schema{
 										Ref: fmt.Sprintf("#/components/schemas/%s", splitTypeName[len(splitTypeName)-1]),
 									},
 								},
