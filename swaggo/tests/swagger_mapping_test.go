@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/Pieeer1/Auto-SwagGo/swaggo"
 )
@@ -21,6 +22,11 @@ type TestChildrenModel struct {
 
 type TestChildrenArrayModel struct {
 	ExampleChildrenInt int
+}
+
+type TimeTestChildrenModel struct {
+	ExampleTime    time.Time
+	ExampleTimePtr *time.Time
 }
 
 func TestSwaggerMapWithAuth(t *testing.T) {
@@ -150,10 +156,6 @@ func TestBaseSwaggerMap(t *testing.T) {
 	if doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Type != "array" {
 		t.Errorf("Expected array, got %s", doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Type)
 	}
-
-	test := doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Items.Type
-
-	fmt.Printf("%+v\n", test)
 
 	if doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Items.Type != "integer" {
 		t.Errorf("Expected integer, got %s", doc.Components.Schemas["TestChildrenModels"].Properties["ExampleInts"].Items.Type)
@@ -318,6 +320,23 @@ func TestSwaggerMappingVersioning(t *testing.T) {
 		Method:      "GET",
 		Summary:     "Test",
 		Description: "Test",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.BodySource,
+				Data: TimeTestChildrenModel{
+					ExampleTime:    time.Now(),
+					ExampleTimePtr: nil,
+				},
+			},
+		},
+		Responses: []swaggo.ResponseData{
+			{
+				Code: 200,
+				Data: TestChildrenModels{
+					ExampleString: "example",
+				},
+			},
+		},
 	})
 
 	swaggoMux.HandleFunc("/test", nil, "v2", swaggo.RequestDetails{
@@ -348,6 +367,10 @@ func TestSwaggerMappingVersioning(t *testing.T) {
 		t.Errorf("Expected Test, got %s", doc.Paths["/api/v2/test"]["get"].Summary)
 	}
 
+	if len(doc.Components.Schemas) != 2 {
+		t.Errorf("Expected 2 schemas, got %d", len(doc.Components.Schemas))
+	}
+
 	docv1, err := swaggoMux.MapDoc("v1")
 
 	if err != nil {
@@ -362,6 +385,10 @@ func TestSwaggerMappingVersioning(t *testing.T) {
 		t.Errorf("Expected Test, got %s", docv1.Paths["/api/v1/test"]["get"].Summary)
 	}
 
+	if len(docv1.Components.Schemas) != 2 {
+		t.Errorf("Expected 2 schemas, got %d", len(doc.Components.Schemas))
+	}
+
 	docv2, err := swaggoMux.MapDoc("v2")
 
 	if err != nil {
@@ -374,6 +401,10 @@ func TestSwaggerMappingVersioning(t *testing.T) {
 
 	if docv2.Paths["/api/v2/test"]["get"].Summary != "Test" {
 		t.Errorf("Expected Test, got %s", docv2.Paths["/api/v2/test"]["get"].Summary)
+	}
+
+	if len(docv2.Components.Schemas) != 0 {
+		t.Errorf("Expected 0 schemas, got %d", len(docv2.Components.Schemas))
 	}
 
 }
