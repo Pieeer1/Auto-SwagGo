@@ -4,10 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -126,17 +123,59 @@ func (c *SwaggoMux) swagger(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	var swaggerHtml string
 
-	_, fileName, _, _ := runtime.Caller(0)
+	baseHtml := `
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content="SwaggerUI" />
+		<title>SwaggerUI</title>
+		<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+	</head>
+	<body>
+	<div id="swagger-ui"></div>
+	<script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" crossorigin></script>
+	<script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js" crossorigin></script>
+		<script>
+			const versioned = '{{is_versioned}}';
+			const urls = '{{versioned_urls}}';
 
-	filePath := filepath.Dir(fileName)
+			if (versioned !== 'true') {
+				window.onload = () => {
+					window.ui = SwaggerUIBundle({
+					url: '{{page_url}}',
+					dom_id: '#swagger-ui',
+					layout: "StandaloneLayout",
+					presets: [
+						SwaggerUIBundle.presets.apis,
+						SwaggerUIStandalonePreset
+					],
+					});
+				};
+			} else {
+				const parsedUrls = JSON.parse(urls);
+				window.onload = () => {
+					window.ui = SwaggerUIBundle({
+					urls: parsedUrls,
+					dom_id: '#swagger-ui',
+					"urls.primaryName": "{{default_name}}",
+					plugins: [
+						SwaggerUIBundle.plugins.DownloadUrl
+					],
+					layout: "StandaloneLayout",
+					presets: [
+						SwaggerUIBundle.presets.apis,
+						SwaggerUIStandalonePreset
+					],
+					});
+					
+				};
+			}
 
-	baseHtml, err := os.ReadFile(fmt.Sprintf("%s/html/index.html", filePath))
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Error reading swagger html file: %s", err.Error())))
-		return
-	}
+		</script>
+	</body>
+</html>`
 
 	if len(c.versions) == 0 {
 		endpoint := fmt.Sprintf("%s%s/openapi.json", c.baseUri, c.prefix)
