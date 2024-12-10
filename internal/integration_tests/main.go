@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Pieeer1/Auto-SwagGo/internal/ext"
 	"github.com/Pieeer1/Auto-SwagGo/swaggo"
 )
 
@@ -324,7 +325,7 @@ func main() {
 							{
 								Id:            1,
 								ArbitraryPtr:  nil,
-								ArbitraryPtr2: nil,
+								ArbitraryPtr2: ext.ToPtr("example"),
 								ArbitraryInt:  1,
 								SomeChildResponses: []SomeChildResponse{
 									{
