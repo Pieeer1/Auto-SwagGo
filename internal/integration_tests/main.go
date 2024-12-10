@@ -302,6 +302,45 @@ func main() {
 		},
 	})
 
+	mux.HandleFunc("/test-bugfix-my-model", health, "", swaggo.RequestDetails{
+		Method: "GET",
+		Requests: []swaggo.RequestData{
+			{
+				Type: swaggo.QuerySource,
+				Data: ExampleQueryStruct{
+					ExampleQueryField:    "example",
+					ExampleIntQueryField: 1,
+				},
+			},
+		},
+		Responses: []swaggo.ResponseData{
+			{
+				Code: http.StatusOK,
+				Data: BaseResponse[FullResponse]{
+					Success: true,
+					Message: "Success",
+					Data: &FullResponse{
+						SomeResponses: []SomeResponse{
+							{
+								Id:            1,
+								ArbitraryPtr:  nil,
+								ArbitraryPtr2: nil,
+								ArbitraryInt:  1,
+								SomeChildResponses: []SomeChildResponse{
+									{
+										ArbitraryInt:       1,
+										ArbitraryStringPtr: nil,
+									},
+								},
+								CreatedAtUtc: time.Now(),
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
 	mux.OpenBrowser()
 
 	err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", "8080"), mux)
@@ -314,4 +353,32 @@ func main() {
 func health(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
+}
+
+type BaseResponse[T any] struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    *T     `json:"data"`
+}
+
+type FullResponse struct {
+	SomeResponses []SomeResponse
+	Page          int
+	PageSize      int
+	TotalItems    int
+	TotalPages    int
+}
+
+type SomeResponse struct {
+	Id                 int                 `json:"id"`
+	ArbitraryPtr       *string             `json:"arbitraryPtr"`
+	ArbitraryPtr2      *string             `json:"arbitraryPtr2"`
+	ArbitraryInt       int                 `json:"arbitraryInt"`
+	SomeChildResponses []SomeChildResponse `json:"someChildResponses"`
+	CreatedAtUtc       time.Time           `json:"createdAtUtc"`
+}
+
+type SomeChildResponse struct {
+	ArbitraryInt       int     `json:"arbitraryInt"`
+	ArbitraryStringPtr *string `json:"arbitraryStringPtr"`
 }

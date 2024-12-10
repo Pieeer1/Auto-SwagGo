@@ -303,7 +303,7 @@ func rawReflect(data any) (reflect.Type, reflect.Value, error) {
 	return t, v, nil
 }
 
-func parseGOTypeToSwaggerType(kind reflect.Kind) string {
+func parseGOTypeToSwaggerType(kind reflect.Kind, t reflect.Type) string {
 	switch kind {
 	case reflect.String:
 		return "string"
@@ -315,7 +315,12 @@ func parseGOTypeToSwaggerType(kind reflect.Kind) string {
 		return "boolean"
 	case reflect.Array, reflect.Slice:
 		return "array"
-	case reflect.Map, reflect.Pointer, reflect.Interface, reflect.Struct, reflect.UnsafePointer:
+	case reflect.Ptr:
+		if t.Elem() != nil {
+			return parseGOTypeToSwaggerType(t.Elem().Kind(), t.Elem())
+		}
+		return "object"
+	case reflect.Map, reflect.Interface, reflect.Struct, reflect.UnsafePointer:
 		return "object"
 	default:
 		return "object"
@@ -486,7 +491,7 @@ func mapChildPropertiesToSchema(t reflect.Type, v reflect.Value) (Schema, error)
 			requiredProperties = append(requiredProperties, fName)
 		}
 
-		swagType := parseGOTypeToSwaggerType(value.Kind())
+		swagType := parseGOTypeToSwaggerType(value.Kind(), value.Type())
 
 		if swagType == "array" && isByteArray(field) {
 			properties[fName] = Property{
@@ -503,7 +508,7 @@ func mapChildPropertiesToSchema(t reflect.Type, v reflect.Value) (Schema, error)
 
 			var childItemValue Schema
 
-			parsedType := parseGOTypeToSwaggerType(arrayType.Kind())
+			parsedType := parseGOTypeToSwaggerType(arrayType.Kind(), arrayType)
 
 			if parsedType == "array" {
 
@@ -634,7 +639,7 @@ func (c *SwaggoMux) getPaths(version string) (map[string]map[string]Path, error)
 						fName = field.Name
 					}
 
-					swagType := parseGOTypeToSwaggerType(value.Kind())
+					swagType := parseGOTypeToSwaggerType(value.Kind(), value.Type())
 					var optionalFormat string
 					if swagType == "array" && isByteArray(field) {
 						swagType = "string"
@@ -739,7 +744,7 @@ func (c *SwaggoMux) getPaths(version string) (map[string]map[string]Path, error)
 					headerMap := make(map[string]Header)
 
 					for header, value := range res.Headers {
-						headerMap[header] = Header{Schema: Schema{Type: parseGOTypeToSwaggerType(reflect.TypeOf(value).Kind())}}
+						headerMap[header] = Header{Schema: Schema{Type: parseGOTypeToSwaggerType(reflect.TypeOf(value).Kind(), reflect.ValueOf(value).Type())}}
 					}
 
 					responses[fmt.Sprintf("%d", res.Code)] = Response{
