@@ -73,7 +73,7 @@ func (m *SwaggoMux) defaultMiddleware(handler http.Handler, requestDetails []Req
 			return rd.Method
 		})
 
-		if !ext.Contains(methods, r.Method) {
+		if r.Method != http.MethodOptions && !ext.Contains(methods, r.Method) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 		handler.ServeHTTP(w, r)
